@@ -1,0 +1,7 @@
+pyautogui
+pynput
+pandas
+stable-baselines3
+gymnasium
+tensorboard
+sb3_contrib

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+.venv/
+
+# Data & models (keep pre-trained)
+data/*
+models/*
+!models/sword_ppo_final.zip
+!models/vec_normalize.pkl
+logs/*
+saved/*
+
+# OS files
+.DS_Store
+*.lnk
+
+# Misc
+Will
+Will/
