@@ -56,16 +56,19 @@ level_counts = {}  # 레벨별 최종 달성 횟수 {10: 5, 11: 3, ...}
 current_sword_max = 0  # 현재 검의 최고 레벨
 prev_level = 0  # 이전 레벨 (검 교체 감지용)
 _sell_item_keywords = []  # --sell-items로 설정, 아이템 이름에 키워드 포함 시 강제 판매
+_filter_sell_pending = False  # 필터 판매 후 봇 응답 대기 중
 
 def _reset_stats():
     global fail_count, prev_text, same_message_count
     global start_fund, current_fund, max_level_achieved
     global total_enhances, total_sells, total_sell_amount
     global level_counts, current_sword_max, prev_level
+    global _filter_sell_pending
 
     fail_count = 0
     prev_text = ""
     same_message_count = 0
+    _filter_sell_pending = False
     start_fund = None
     current_fund = None
     max_level_achieved = 0
@@ -381,11 +384,21 @@ def act_inference(mode='ai'):
     # 메시지 복사 및 파싱은 lock 안에서
     with action_lock:
         global prev_text, same_message_count, start_fund, max_level_achieved, current_fund
+        global _filter_sell_pending
         text = _copy_message()
 
         force_enhance = False
         if prev_text == text:
             same_message_count += 1
+
+            # 필터 판매 대기 중이면 봇 응답 올 때까지 아무것도 안 함
+            if _filter_sell_pending:
+                print(f"⏳ 필터 판매 응답 대기 중... ({same_message_count}/10)")
+                if same_message_count >= 10:
+                    print("⚠️ 봇 응답 없음, 판매 재시도")
+                    _filter_sell_pending = False  # 재시도 허용
+                return
+
             print(f"⏳ 봇 응답 대기 중... ({same_message_count}/10)")
 
             # 봇 응답 대기 (최대 3번 재확인)
@@ -408,6 +421,7 @@ def act_inference(mode='ai'):
         else:
             same_message_count = 0  # 새 메시지면 카운터 리셋
             prev_text = text
+            _filter_sell_pending = False  # 새 메시지 = 봇 응답 완료
 
         fund, level = _parse_message(text)
 
@@ -484,6 +498,7 @@ def act_inference(mode='ai'):
             matched = [kw for kw in _sell_item_keywords if kw in last_bot_message]
             print(f"🚫 아이템 필터 감지 [{','.join(matched)}] - 강제 판매 (lv.{level})")
             inference_result = 1
+            _filter_sell_pending = True  # 봇 응답 올 때까지 강화 차단
         # 골드 부족이면 무조건 판매 (목표 레벨 아닌 이상)
         elif is_out_of_gold and level is not None and level < MAX_LEVEL_FOR_ENHANCE:
             print("💸 골드 부족 감지 - 무조건 판매")
