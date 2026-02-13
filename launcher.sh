@@ -5,6 +5,36 @@ cd "$(dirname "$0")"
 PY="$(pwd)/.venv/bin/python3"
 TB="$(pwd)/.venv/bin/tensorboard"
 
+select_filter() {
+    clear
+    echo "=========================================="
+    echo " Item filter"
+    echo "=========================================="
+    echo ""
+    echo "  Sell items with specific keywords?"
+    echo "  (items with keyword in name = force sell)"
+    echo ""
+    echo "  [1] No filter (default)"
+    echo "  [2] Sell items containing: sword, club"
+    echo "  [3] Custom keywords"
+    echo "  [0] Back"
+    echo ""
+    SELL_ARGS=""
+    read -rp "Select: " fchoice
+    case "$fchoice" in
+        2) SELL_ARGS="--sell-items 검,몽둥이" ;;
+        3)
+            read -rp "Keywords (comma-separated): " sell_kw
+            if [[ -n "$sell_kw" ]]; then
+                SELL_ARGS="--sell-items ${sell_kw}"
+            fi
+            ;;
+        0) return 1 ;;
+        *) ;;
+    esac
+    return 0
+}
+
 show_menu() {
     clear
     echo "=========================================="
@@ -36,6 +66,8 @@ show_menu() {
 select_profile() {
     local auto_mode="$1"
     local auto_label="$2"
+
+    # Profile
     clear
     echo "=========================================="
     echo " ${auto_label} auto mode - Select profile"
@@ -55,7 +87,7 @@ select_profile() {
         0|*) return 1 ;;
     esac
 
-    # Timer setting
+    # Timer
     clear
     echo "=========================================="
     echo " ${auto_label} [${profile}] - Timer setting"
@@ -73,6 +105,19 @@ select_profile() {
         echo "  >> Will stop at ${stop_time} + Mac shutdown"
     fi
 
+    # Item filter
+    SELL_ARGS=""
+    if ! select_filter; then
+        return 1
+    fi
+
+    # Run mode
+    clear
+    echo "=========================================="
+    echo " ${auto_label} [${profile}] - Start"
+    [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS"
+    [[ -n "$timer_args" ]] && echo " Timer: ${stop_time} + shutdown"
+    echo "=========================================="
     echo ""
     echo "  [1] Console (foreground)"
     echo "  [2] Background"
@@ -88,7 +133,7 @@ select_profile() {
             echo ""
             # shellcheck disable=SC2086
             nohup "$PY" macro.py --mode "$auto_mode" --delay 5 \
-                --profile "$profile" $timer_args > /dev/null 2>&1 &
+                --profile "$profile" $timer_args $SELL_ARGS > /dev/null 2>&1 &
             echo "[OK] Macro started in background (5s delay). PID: $!"
             echo ""
             read -rp "Press Enter to continue..."
@@ -105,7 +150,7 @@ select_profile() {
             echo ""
             # shellcheck disable=SC2086
             "$PY" macro.py --mode "$auto_mode" --delay 5 \
-                --profile "$profile" $timer_args
+                --profile "$profile" $timer_args $SELL_ARGS
             echo ""
             read -rp "Press Enter to continue..."
             ;;
@@ -118,26 +163,36 @@ while true; do
     read -rp "Select: " choice
     case "$choice" in
         1)
-            clear
-            echo "=========================================="
-            echo " Macro start (console mode)"
-            echo " Exit: F5 or ESC"
-            echo "=========================================="
-            echo ""
-            "$PY" macro.py
-            echo ""
+            SELL_ARGS=""
+            if select_filter; then
+                clear
+                echo "=========================================="
+                echo " Macro start (console mode)"
+                echo " Exit: F5 or ESC"
+                [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS"
+                echo "=========================================="
+                echo ""
+                # shellcheck disable=SC2086
+                "$PY" macro.py $SELL_ARGS
+                echo ""
+            fi
             read -rp "Press Enter to continue..."
             ;;
         2)
-            clear
-            echo "=========================================="
-            echo " Macro start (background)"
-            echo "=========================================="
-            echo ""
-            nohup "$PY" macro.py > /dev/null 2>&1 &
-            echo "[OK] Macro started in background. PID: $!"
-            echo "     Use menu [3] to stop."
-            echo ""
+            SELL_ARGS=""
+            if select_filter; then
+                clear
+                echo "=========================================="
+                echo " Macro start (background)"
+                [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS"
+                echo "=========================================="
+                echo ""
+                # shellcheck disable=SC2086
+                nohup "$PY" macro.py $SELL_ARGS > /dev/null 2>&1 &
+                echo "[OK] Macro started in background. PID: $!"
+                echo "     Use menu [3] to stop."
+                echo ""
+            fi
             read -rp "Press Enter to continue..."
             ;;
         3)

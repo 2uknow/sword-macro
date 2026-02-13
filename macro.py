@@ -55,6 +55,7 @@ total_sell_amount = 0
 level_counts = {}  # 레벨별 최종 달성 횟수 {10: 5, 11: 3, ...}
 current_sword_max = 0  # 현재 검의 최고 레벨
 prev_level = 0  # 이전 레벨 (검 교체 감지용)
+_sell_item_keywords = []  # --sell-items로 설정, 아이템 이름에 키워드 포함 시 강제 판매
 
 def _reset_stats():
     global fail_count, prev_text, same_message_count
@@ -478,6 +479,11 @@ def act_inference(mode='ai'):
         if is_zero_sword:
             print("🔄 0강 검 감지 - 무조건 강화")
             inference_result = 0
+        # 아이템 필터: 키워드 포함 시 강제 판매 (1강 이상만, 0강은 판매 불가)
+        elif _sell_item_keywords and level is not None and level > 0 and any(kw in last_bot_message for kw in _sell_item_keywords):
+            matched = [kw for kw in _sell_item_keywords if kw in last_bot_message]
+            print(f"🚫 아이템 필터 감지 [{','.join(matched)}] - 강제 판매 (lv.{level})")
+            inference_result = 1
         # 골드 부족이면 무조건 판매 (목표 레벨 아닌 이상)
         elif is_out_of_gold and level is not None and level < MAX_LEVEL_FOR_ENHANCE:
             print("💸 골드 부족 감지 - 무조건 판매")
@@ -583,7 +589,12 @@ if __name__ == "__main__":
     parser.add_argument("--profile", choices=list(COORD_PROFILES.keys()), default=DEFAULT_PROFILE, help="좌표 프로필")
     parser.add_argument("--until", type=str, default=None, help="종료 시각 (HH:MM, 예: 18:00)")
     parser.add_argument("--shutdown", action="store_true", help="종료 시 PC 강제 종료")
+    parser.add_argument("--sell-items", type=str, default=None, help="강제 판매 키워드 (쉼표 구분, 예: 검,몽둥이)")
     args = parser.parse_args()
+
+    # 아이템 필터 적용
+    if args.sell_items:
+        _sell_item_keywords = [kw.strip() for kw in args.sell_items.split(",") if kw.strip()]
 
     # 좌표 프로필 적용
     profile = COORD_PROFILES[args.profile]
@@ -597,6 +608,8 @@ if __name__ == "__main__":
     print("  F1: 수동 강화 | F2: 수동 판매")
     print("  F3: AI 자동 모드 | F4: 규칙 기반 자동 모드")
     print("  F5: 종료 | ESC: 긴급 종료")
+    if _sell_item_keywords:
+        print(f"  Item filter: [{', '.join(_sell_item_keywords)}] -> force sell")
     print("="*60)
     print()
 

@@ -5,6 +5,9 @@ title Sword Macro Launcher
 set "PY=%~dp0.venv\Scripts\python.exe"
 
 :MENU
+set "sell_args="
+set "profile="
+set "timer_args="
 cls
 echo ==========================================
 echo        Sword Macro Launcher
@@ -54,6 +57,81 @@ echo [!] Invalid input.
 timeout /t 2 >nul
 goto MENU
 
+rem ============================================
+rem  Item filter (shared by all start paths)
+rem ============================================
+:SELECT_FILTER
+cls
+echo ==========================================
+echo  Item filter
+echo ==========================================
+echo.
+echo   Sell items with specific keywords?
+echo   (items with keyword in name = force sell)
+echo.
+echo   [1] No filter (default)
+echo   [2] Sell items containing: sword, club
+echo   [3] Custom keywords
+echo   [0] Back
+echo.
+set "sell_args="
+set "fchoice="
+set /p fchoice="Select: "
+if "%fchoice%"=="0" goto MENU
+if "%fchoice%"=="2" set "sell_args=--sell-items 검,몽둥이"
+if "%fchoice%"=="3" goto CUSTOM_FILTER
+goto %filter_return%
+
+:CUSTOM_FILTER
+set "sell_kw="
+set /p sell_kw="Keywords (comma-separated): "
+if not "%sell_kw%"=="" set "sell_args=--sell-items %sell_kw%"
+goto %filter_return%
+
+rem ============================================
+rem  [1] Start macro (console)
+rem ============================================
+:START_CONSOLE
+set "filter_return=START_CONSOLE_RUN"
+goto SELECT_FILTER
+
+:START_CONSOLE_RUN
+cls
+echo ==========================================
+echo  Macro start (console mode)
+echo  Exit: F5 or ESC
+if not "%sell_args%"=="" echo  Filter: %sell_args%
+echo ==========================================
+echo.
+%PY% macro.py %sell_args%
+echo.
+pause
+goto MENU
+
+rem ============================================
+rem  [2] Start macro (background)
+rem ============================================
+:START_BG
+set "filter_return=START_BG_RUN"
+goto SELECT_FILTER
+
+:START_BG_RUN
+cls
+echo ==========================================
+echo  Macro start (background)
+if not "%sell_args%"=="" echo  Filter: %sell_args%
+echo ==========================================
+echo.
+start "" %~dp0.venv\Scripts\pythonw.exe macro.py %sell_args%
+echo [OK] Macro started in background.
+echo      Use menu [3] to stop.
+echo.
+pause
+goto MENU
+
+rem ============================================
+rem  Auto start flow: [a] Heuristic / [b] AI
+rem ============================================
 :AUTO_HEURISTIC
 set "auto_mode=heuristic"
 set "auto_label=Heuristic"
@@ -81,6 +159,8 @@ if "%pchoice%"=="2" set "profile=work"
 if "%pchoice%"=="3" set "profile=work_local"
 if "%pchoice%"=="0" goto MENU
 if not defined profile goto MENU
+
+:AUTO_TIMER
 cls
 echo ==========================================
 echo  %auto_label% [%profile%] - Timer setting
@@ -97,6 +177,18 @@ if not "%stop_time%"=="" (
     echo.
     echo   >> Will stop at %stop_time% + PC shutdown
 )
+
+:AUTO_FILTER
+set "filter_return=AUTO_RUN_SELECT"
+goto SELECT_FILTER
+
+:AUTO_RUN_SELECT
+cls
+echo ==========================================
+echo  %auto_label% [%profile%] - Start
+if not "%sell_args%"=="" echo  Filter: %sell_args%
+if not "%timer_args%"=="" echo  Timer: %stop_time% + shutdown
+echo ==========================================
 echo.
 echo   [1] Console (foreground)
 echo   [2] Background + RDP disconnect
@@ -114,9 +206,10 @@ echo  %auto_label% [%profile%] - starting in 5s...
 echo  Exit: F5 or ESC
 echo ==========================================
 echo.
-%PY% macro.py --mode %auto_mode% --delay 5 --profile %profile% %timer_args%
+%PY% macro.py --mode %auto_mode% --delay 5 --profile %profile% %timer_args% %sell_args%
 set "profile="
 set "timer_args="
+set "sell_args="
 echo.
 pause
 goto MENU
@@ -127,44 +220,22 @@ echo ==========================================
 echo  %auto_label% [%profile%] - background + RDP
 echo ==========================================
 echo.
-start "" %~dp0.venv\Scripts\pythonw.exe macro.py --mode %auto_mode% --delay 5 --profile %profile% %timer_args%
+start "" %~dp0.venv\Scripts\pythonw.exe macro.py --mode %auto_mode% --delay 5 --profile %profile% %timer_args% %sell_args%
 set "profile="
 set "timer_args="
+set "sell_args="
 echo [OK] Macro started in background (5s delay).
 echo.
 echo RDP disconnect in 3 seconds...
-echo (UAC prompt will appear if not admin)
 timeout /t 3 >nul
 call "%~dp0rdp_disconnect.bat"
 echo.
 pause
 goto MENU
 
-:START_CONSOLE
-cls
-echo ==========================================
-echo  Macro start (console mode)
-echo  Exit: F5 or ESC
-echo ==========================================
-echo.
-%PY% macro.py
-echo.
-pause
-goto MENU
-
-:START_BG
-cls
-echo ==========================================
-echo  Macro start (background)
-echo ==========================================
-echo.
-start "" %~dp0.venv\Scripts\pythonw.exe macro.py
-echo [OK] Macro started in background.
-echo      Use menu [3] to stop.
-echo.
-pause
-goto MENU
-
+rem ============================================
+rem  [3] Stop macro
+rem ============================================
 :STOP
 cls
 echo ==========================================
@@ -181,6 +252,9 @@ echo.
 pause
 goto MENU
 
+rem ============================================
+rem  Tools
+rem ============================================
 :COORDS
 cls
 echo ==========================================
@@ -274,7 +348,6 @@ echo ==========================================
 echo.
 echo  Disconnect RDP but keep desktop session
 echo  alive so the macro keeps running.
-echo  (UAC prompt will appear if not admin)
 echo.
 echo   [1] Disconnect (keep session)
 echo   [0] Back
