@@ -58,18 +58,20 @@ prev_level = 0  # 이전 레벨 (검 교체 감지용)
 _sell_item_keywords = []  # --sell-items로 설정, 아이템 이름에 키워드 포함 시 강제 판매
 _keep_item_keywords = []  # --keep-items로 설정, 이 키워드 포함 시 판매 안 함 (sell보다 우선)
 _filter_sell_pending = False  # 필터 판매 후 봇 응답 대기 중
+_continue_past_goal = False  # 목표 달성 후 계속 강화 모드
 
 def _reset_stats():
     global fail_count, prev_text, same_message_count
     global start_fund, current_fund, max_level_achieved
     global total_enhances, total_sells, total_sell_amount
     global level_counts, current_sword_max, prev_level
-    global _filter_sell_pending
+    global _filter_sell_pending, _continue_past_goal
 
     fail_count = 0
     prev_text = ""
     same_message_count = 0
     _filter_sell_pending = False
+    _continue_past_goal = False
     start_fund = None
     current_fund = None
     max_level_achieved = 0
@@ -86,17 +88,28 @@ def worker_loop():
         try:
             if _goal_reached_event.is_set():
                 try:
-                    input()
+                    choice = input().strip().lower()
                 except EOFError:
                     print("(background mode: auto-restart in 5s)")
                     time.sleep(5)
+                    choice = ""
 
-                _reset_stats()
-                print("")
-                print("=" * 60)
-                print("  >>> Stats reset! Restarting...")
-                print("=" * 60)
-                print("")
+                if choice == 'c':
+                    # 현재 상태 유지하고 계속 강화
+                    _continue_past_goal = True
+                    print("")
+                    print("=" * 60)
+                    print("  >>> 목표 초과 강화 모드! 계속 진행...")
+                    print("=" * 60)
+                    print("")
+                else:
+                    # 초기화 후 재시작
+                    _reset_stats()
+                    print("")
+                    print("=" * 60)
+                    print("  >>> Stats reset! Restarting...")
+                    print("=" * 60)
+                    print("")
                 running_mode = _goal_reached_mode[0]
                 _goal_reached_event.clear()
                 continue
@@ -214,6 +227,23 @@ def _copy_message():
     text = pyperclip.paste()
     return text
 
+def _safe_paste(command):
+    """클립보드에 명령어를 설정하고 검증 후 붙여넣기 (Ctrl+C 잔여 이벤트 방지)"""
+    for attempt in range(5):
+        pyperclip.copy(command)
+        time.sleep(0.05)
+        if pyperclip.paste() == command:
+            break
+        # 클립보드가 Ctrl+C 잔여 이벤트로 덮어씌워짐 - 재시도
+        if attempt < 4:
+            time.sleep(0.05)
+
+    controller.press(MODIFIER_KEY)
+    controller.press('v')
+    time.sleep(0.05)
+    controller.release('v')
+    controller.release(MODIFIER_KEY)
+
 def _parse_message(message):
     global fail_count
 
@@ -294,15 +324,7 @@ def act_enhance():
         _click_mouse(*input_coords)
         time.sleep(0.1)
 
-        pyperclip.copy('/강화')
-        time.sleep(0.05)
-
-        # Ctrl+V로 붙여넣기
-        controller.press(MODIFIER_KEY)
-        controller.press('v')
-        time.sleep(0.05)
-        controller.release('v')
-        controller.release(MODIFIER_KEY)
+        _safe_paste('/강화')
         time.sleep(0.2)
 
         # 클립보드 복원
@@ -327,15 +349,7 @@ def act_sell():
         _click_mouse(*input_coords)
         time.sleep(0.1)
 
-        pyperclip.copy('/판매')
-        time.sleep(0.05)
-
-        # Ctrl+V로 붙여넣기
-        controller.press(MODIFIER_KEY)
-        controller.press('v')
-        time.sleep(0.05)
-        controller.release('v')
-        controller.release(MODIFIER_KEY)
+        _safe_paste('/판매')
         time.sleep(0.2)
 
         # 클립보드 복원
@@ -363,15 +377,7 @@ def send_congratulation_message(level):
 
         # 축하 메시지 작성
         congratulation_msg = f"🎉🎊 축하합니다! +{level} 강화 목표 달성! 🎊🎉"
-        pyperclip.copy(congratulation_msg)
-        time.sleep(0.05)
-
-        # Ctrl+V로 붙여넣기
-        controller.press(MODIFIER_KEY)
-        controller.press('v')
-        time.sleep(0.05)
-        controller.release('v')
-        controller.release(MODIFIER_KEY)
+        _safe_paste(congratulation_msg)
         time.sleep(0.2)
 
         # 클립보드 복원
@@ -383,7 +389,7 @@ def send_congratulation_message(level):
 
         print(f"🎉 목표 달성! +{level} 강화 완료! 자동 모드 중지")
         print("")
-        print("Enter to restart / F5 or ESC to quit")
+        print("Enter = 초기화 재시작 / c = 계속 강화 / F5 or ESC = 종료")
         previous_mode = running_mode
         running_mode = None  # 자동 모드 중지
         _goal_reached_mode[0] = previous_mode
@@ -465,8 +471,8 @@ def act_inference(mode='ai'):
 
             prev_level = level
 
-        # 목표 레벨 달성 체크
-        if level is not None and level >= MAX_LEVEL_FOR_ENHANCE:
+        # 목표 레벨 달성 체크 (계속 강화 모드면 스킵)
+        if level is not None and level >= MAX_LEVEL_FOR_ENHANCE and not _continue_past_goal:
             global running_mode
             previous_mode = running_mode
             running_mode = None
@@ -484,7 +490,7 @@ def act_inference(mode='ai'):
                 print(f"   레벨별 달성: {stats}")
             print("="*60)
             print("")
-            print("Enter to restart / F5 or ESC to quit")
+            print("Enter = 초기화 재시작 / c = 계속 강화 / F5 or ESC = 종료")
             _goal_reached_mode[0] = previous_mode
             _goal_reached_event.set()
             return

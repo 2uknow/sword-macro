@@ -164,7 +164,7 @@ echo   Sell items with specific keywords?
 echo   (items with keyword in name = force sell)
 echo.
 echo   [1] No filter (default)
-echo   [2] Sell: 검,몽둥이 + keep keywords
+echo   [2] Sell: 검,몽둥이,망치 + keep keywords
 echo   [3] Custom keywords
 echo   [0] Back
 echo.
@@ -174,7 +174,7 @@ set "fchoice="
 set /p fchoice="Select: "
 if "%fchoice%"=="0" goto MENU
 if "%fchoice%"=="3" goto CUSTOM_FILTER
-if "%fchoice%"=="2" set "sell_args=--sell-items 검,몽둥이"
+if "%fchoice%"=="2" set "sell_args=--sell-items 검,몽둥이,망치"
 if "%fchoice%"=="2" goto KEEP_INPUT
 goto %filter_return%
 
