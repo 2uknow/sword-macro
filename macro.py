@@ -81,7 +81,7 @@ def _reset_stats():
     prev_level = 0
 
 def worker_loop():
-    global running_mode
+    global running_mode, _filter_sell_pending
     while True:
         try:
             if _goal_reached_event.is_set():
@@ -104,13 +104,15 @@ def worker_loop():
             if running_mode == 'ai':
                 act_inference('ai')
                 if _filter_sell_pending:
-                    time.sleep(3.0)  # 필터 판매 후 봇 응답 대기
+                    time.sleep(3.0)
+                    _filter_sell_pending = False
                 else:
                     time.sleep(ACTION_DELAY)
             elif running_mode == 'heuristic':
                 act_inference('heuristic')
                 if _filter_sell_pending:
-                    time.sleep(3.0)  # 필터 판매 후 봇 응답 대기
+                    time.sleep(3.0)
+                    _filter_sell_pending = False
                 else:
                     time.sleep(ACTION_DELAY)
             else:
@@ -398,14 +400,6 @@ def act_inference(mode='ai'):
         if prev_text == text:
             same_message_count += 1
 
-            # 필터 판매 대기 중이면 봇 응답 올 때까지 아무것도 안 함
-            if _filter_sell_pending:
-                print(f"⏳ 필터 판매 응답 대기 중... ({same_message_count}/10)")
-                if same_message_count >= 10:
-                    print("⚠️ 봇 응답 없음, 판매 재시도")
-                    _filter_sell_pending = False  # 재시도 허용
-                return
-
             print(f"⏳ 봇 응답 대기 중... ({same_message_count}/10)")
 
             # 봇 응답 대기 (최대 3번 재확인)
@@ -428,7 +422,6 @@ def act_inference(mode='ai'):
         else:
             same_message_count = 0  # 새 메시지면 카운터 리셋
             prev_text = text
-            _filter_sell_pending = False  # 새 메시지 = 봇 응답 완료
 
         fund, level = _parse_message(text)
 
@@ -505,8 +498,8 @@ def act_inference(mode='ai'):
                 kept = [kw for kw in _keep_item_keywords if kw in last_bot_message] if _keep_item_keywords else []
                 if not kept:
                     _filter_sell_pending = True
-        # 아이템 필터: 키워드 포함 시 강제 판매 (1강 이상만, 0강은 판매 불가)
-        elif _sell_item_keywords and level is not None and level > 0 and any(kw in last_bot_message for kw in _sell_item_keywords):
+        # 아이템 필터: 키워드 포함 시 강제 판매 (1강만, 0강은 위에서 강화 처리)
+        elif _sell_item_keywords and level is not None and level == 1 and any(kw in last_bot_message for kw in _sell_item_keywords):
             # keep 키워드가 있으면 판매 안 함
             kept = [kw for kw in _keep_item_keywords if kw in last_bot_message] if _keep_item_keywords else []
             if kept:
