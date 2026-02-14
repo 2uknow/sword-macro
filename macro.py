@@ -104,14 +104,14 @@ def worker_loop():
             if running_mode == 'ai':
                 act_inference('ai')
                 if _filter_sell_pending:
-                    time.sleep(1.5)
+                    time.sleep(2.0)
                     _filter_sell_pending = False
                 else:
                     time.sleep(ACTION_DELAY)
             elif running_mode == 'heuristic':
                 act_inference('heuristic')
                 if _filter_sell_pending:
-                    time.sleep(1.5)
+                    time.sleep(2.0)
                     _filter_sell_pending = False
                 else:
                     time.sleep(ACTION_DELAY)
