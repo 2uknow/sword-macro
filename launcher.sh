@@ -15,7 +15,7 @@ select_filter() {
     echo "  (items with keyword in name = force sell)"
     echo ""
     echo "  [1] No filter (default)"
-    echo "  [2] Sell: 검,몽둥이,망치 + keep keywords"
+    echo "  [2] Sell: 검,몽둥이,망치,도끼 + keep keywords"
     echo "  [3] Custom keywords"
     echo "  [0] Back"
     echo ""
@@ -24,7 +24,7 @@ select_filter() {
     read -rp "Select: " fchoice
     case "$fchoice" in
         2)
-            SELL_ARGS="--sell-items 검,몽둥이,망치"
+            SELL_ARGS="--sell-items 검,몽둥이,망치,도끼"
             local saved_keep=""
             if [[ -f "$(dirname "$0")/keep_keywords.txt" ]]; then
                 saved_keep=$(cat "$(dirname "$0")/keep_keywords.txt")
