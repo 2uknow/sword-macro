@@ -4,7 +4,7 @@ cd /d "%~dp0"
 title Sword Macro Launcher
 set "PY=%~dp0.venv\Scripts\python.exe"
 
-rem Last used options (persist across menu returns)
+rem Last used options (load from file if exists)
 set "last_mode="
 set "last_label="
 set "last_profile="
@@ -14,6 +14,9 @@ set "last_sell_args="
 set "last_keep_args="
 set "last_run_type="
 set "last_cmd="
+if exist "%~dp0last_run.ini" (
+    for /f "usebackq tokens=1,* delims==" %%a in ("%~dp0last_run.ini") do set "%%a=%%b"
+)
 
 :MENU
 set "sell_args="
@@ -259,6 +262,7 @@ set "last_sell_args=%sell_args%"
 set "last_keep_args=%keep_args%"
 set "last_run_type=console"
 set "last_cmd=%sell_args% %keep_args%"
+call :SAVE_LAST
 %PY% macro.py %sell_args% %keep_args%
 echo.
 pause
@@ -287,6 +291,7 @@ set "last_sell_args=%sell_args%"
 set "last_keep_args=%keep_args%"
 set "last_run_type=background"
 set "last_cmd=%sell_args% %keep_args%"
+call :SAVE_LAST
 start "" %~dp0.venv\Scripts\pythonw.exe macro.py %sell_args% %keep_args%
 echo [OK] Macro started in background.
 echo      Use menu [3] to stop.
@@ -376,6 +381,7 @@ set "last_sell_args=%sell_args%"
 set "last_keep_args=%keep_args%"
 set "last_run_type=console"
 set "last_cmd=--mode %auto_mode% --delay 5 --profile %profile% %timer_args% %sell_args% %keep_args%"
+call :SAVE_LAST
 
 cls
 echo ==========================================
@@ -403,6 +409,7 @@ set "last_sell_args=%sell_args%"
 set "last_keep_args=%keep_args%"
 set "last_run_type=background+RDP"
 set "last_cmd=--mode %auto_mode% --delay 5 --profile %profile% %timer_args% %sell_args% %keep_args%"
+call :SAVE_LAST
 
 cls
 echo ==========================================
@@ -551,6 +558,20 @@ if "%dchoice%"=="1" (
 echo.
 pause
 goto MENU
+
+:SAVE_LAST
+(
+    echo last_mode=%last_mode%
+    echo last_label=%last_label%
+    echo last_profile=%last_profile%
+    echo last_timer_args=%last_timer_args%
+    echo last_stop_time=%last_stop_time%
+    echo last_sell_args=%last_sell_args%
+    echo last_keep_args=%last_keep_args%
+    echo last_run_type=%last_run_type%
+    echo last_cmd=%last_cmd%
+)>"%~dp0last_run.ini"
+goto :eof
 
 :EXIT
 cls

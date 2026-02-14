@@ -15,6 +15,7 @@ saved/*
 
 # User settings
 keep_keywords.txt
+last_run.ini
 
 # OS files
 .DS_Store
