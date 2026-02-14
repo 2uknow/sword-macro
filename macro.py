@@ -102,10 +102,16 @@ def worker_loop():
 
             if running_mode == 'ai':
                 act_inference('ai')
-                time.sleep(ACTION_DELAY)  # wait before next inference
+                if _filter_sell_pending:
+                    time.sleep(3.0)  # 필터 판매 후 봇 응답 대기
+                else:
+                    time.sleep(ACTION_DELAY)
             elif running_mode == 'heuristic':
                 act_inference('heuristic')
-                time.sleep(ACTION_DELAY)
+                if _filter_sell_pending:
+                    time.sleep(3.0)  # 필터 판매 후 봇 응답 대기
+                else:
+                    time.sleep(ACTION_DELAY)
             else:
                 time.sleep(0.1)
         except pyautogui.FailSafeException:
