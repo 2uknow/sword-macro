@@ -15,18 +15,30 @@ select_filter() {
     echo "  (items with keyword in name = force sell)"
     echo ""
     echo "  [1] No filter (default)"
-    echo "  [2] Sell items containing: sword, club"
+    echo "  [2] Sell: 검,몽둥이 + keep keywords"
     echo "  [3] Custom keywords"
     echo "  [0] Back"
     echo ""
     SELL_ARGS=""
+    KEEP_ARGS=""
     read -rp "Select: " fchoice
     case "$fchoice" in
-        2) SELL_ARGS="--sell-items 검,몽둥이" ;;
+        2)
+            SELL_ARGS="--sell-items 검,몽둥이"
+            echo ""
+            read -rp "Keep keywords (comma-separated, Enter to skip): " keep_kw
+            if [[ -n "$keep_kw" ]]; then
+                KEEP_ARGS="--keep-items ${keep_kw}"
+            fi
+            ;;
         3)
-            read -rp "Keywords (comma-separated): " sell_kw
+            read -rp "Sell keywords (comma-separated): " sell_kw
             if [[ -n "$sell_kw" ]]; then
                 SELL_ARGS="--sell-items ${sell_kw}"
+            fi
+            read -rp "Keep keywords (comma-separated, Enter to skip): " keep_kw
+            if [[ -n "$keep_kw" ]]; then
+                KEEP_ARGS="--keep-items ${keep_kw}"
             fi
             ;;
         0) return 1 ;;
@@ -107,6 +119,7 @@ select_profile() {
 
     # Item filter
     SELL_ARGS=""
+    KEEP_ARGS=""
     if ! select_filter; then
         return 1
     fi
@@ -115,7 +128,7 @@ select_profile() {
     clear
     echo "=========================================="
     echo " ${auto_label} [${profile}] - Start"
-    [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS"
+    [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS $KEEP_ARGS"
     [[ -n "$timer_args" ]] && echo " Timer: ${stop_time} + shutdown"
     echo "=========================================="
     echo ""
@@ -133,7 +146,7 @@ select_profile() {
             echo ""
             # shellcheck disable=SC2086
             nohup "$PY" macro.py --mode "$auto_mode" --delay 5 \
-                --profile "$profile" $timer_args $SELL_ARGS > /dev/null 2>&1 &
+                --profile "$profile" $timer_args $SELL_ARGS $KEEP_ARGS > /dev/null 2>&1 &
             echo "[OK] Macro started in background (5s delay). PID: $!"
             echo ""
             read -rp "Press Enter to continue..."
@@ -150,7 +163,7 @@ select_profile() {
             echo ""
             # shellcheck disable=SC2086
             "$PY" macro.py --mode "$auto_mode" --delay 5 \
-                --profile "$profile" $timer_args $SELL_ARGS
+                --profile "$profile" $timer_args $SELL_ARGS $KEEP_ARGS
             echo ""
             read -rp "Press Enter to continue..."
             ;;
@@ -164,31 +177,33 @@ while true; do
     case "$choice" in
         1)
             SELL_ARGS=""
+            KEEP_ARGS=""
             if select_filter; then
                 clear
                 echo "=========================================="
                 echo " Macro start (console mode)"
                 echo " Exit: F5 or ESC"
-                [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS"
+                [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS $KEEP_ARGS"
                 echo "=========================================="
                 echo ""
                 # shellcheck disable=SC2086
-                "$PY" macro.py $SELL_ARGS
+                "$PY" macro.py $SELL_ARGS $KEEP_ARGS
                 echo ""
             fi
             read -rp "Press Enter to continue..."
             ;;
         2)
             SELL_ARGS=""
+            KEEP_ARGS=""
             if select_filter; then
                 clear
                 echo "=========================================="
                 echo " Macro start (background)"
-                [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS"
+                [[ -n "$SELL_ARGS" ]] && echo " Filter: $SELL_ARGS $KEEP_ARGS"
                 echo "=========================================="
                 echo ""
                 # shellcheck disable=SC2086
-                nohup "$PY" macro.py $SELL_ARGS > /dev/null 2>&1 &
+                nohup "$PY" macro.py $SELL_ARGS $KEEP_ARGS > /dev/null 2>&1 &
                 echo "[OK] Macro started in background. PID: $!"
                 echo "     Use menu [3] to stop."
                 echo ""

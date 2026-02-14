@@ -56,6 +56,7 @@ level_counts = {}  # 레벨별 최종 달성 횟수 {10: 5, 11: 3, ...}
 current_sword_max = 0  # 현재 검의 최고 레벨
 prev_level = 0  # 이전 레벨 (검 교체 감지용)
 _sell_item_keywords = []  # --sell-items로 설정, 아이템 이름에 키워드 포함 시 강제 판매
+_keep_item_keywords = []  # --keep-items로 설정, 이 키워드 포함 시 판매 안 함 (sell보다 우선)
 _filter_sell_pending = False  # 필터 판매 후 봇 응답 대기 중
 
 def _reset_stats():
@@ -499,12 +500,34 @@ def act_inference(mode='ai'):
         if is_zero_sword:
             print("🔄 0강 검 감지 - 무조건 강화")
             inference_result = 0
+            # 필터 키워드 매칭 시 강화 후 봇 응답 대기 (연속 강화 방지)
+            if _sell_item_keywords and any(kw in last_bot_message for kw in _sell_item_keywords):
+                kept = [kw for kw in _keep_item_keywords if kw in last_bot_message] if _keep_item_keywords else []
+                if not kept:
+                    _filter_sell_pending = True
         # 아이템 필터: 키워드 포함 시 강제 판매 (1강 이상만, 0강은 판매 불가)
         elif _sell_item_keywords and level is not None and level > 0 and any(kw in last_bot_message for kw in _sell_item_keywords):
-            matched = [kw for kw in _sell_item_keywords if kw in last_bot_message]
-            print(f"🚫 아이템 필터 감지 [{','.join(matched)}] - 강제 판매 (lv.{level})")
-            inference_result = 1
-            _filter_sell_pending = True  # 봇 응답 올 때까지 강화 차단
+            # keep 키워드가 있으면 판매 안 함
+            kept = [kw for kw in _keep_item_keywords if kw in last_bot_message] if _keep_item_keywords else []
+            if kept:
+                matched = [kw for kw in _sell_item_keywords if kw in last_bot_message]
+                print(f"✨ 아이템 보존 [{','.join(kept)}] - 판매 안 함 (lv.{level}, matched: {','.join(matched)})")
+                # keep이면 일반 AI/heuristic으로 진행 (아래 else 블록으로)
+                if fund is None:
+                    fund = 0
+                profit = fund - start_fund if start_fund else 0
+                level_stats = " | ".join([f"{lv}강:{cnt}" for lv, cnt in sorted(level_counts.items())]) if level_counts else "없음"
+                print(f"📊 골드: {fund:,}G ({profit:+,}) | 레벨: +{level} (최고:{max_level_achieved}) | 실패: {fail_count}회 | 달성: [{level_stats}]", end=" | ")
+                if mode == 'ai':
+                    inference_result = ai.predict(fund, level, fail_count)
+                else:
+                    inference_result = ai.heuristic(fund, level, fail_count)
+                print(f"결정: {'강화' if inference_result == 0 else '판매' if inference_result == 1 else '대기'}")
+            else:
+                matched = [kw for kw in _sell_item_keywords if kw in last_bot_message]
+                print(f"🚫 아이템 필터 감지 [{','.join(matched)}] - 강제 판매 (lv.{level})")
+                inference_result = 1
+                _filter_sell_pending = True  # 봇 응답 올 때까지 강화 차단
         # 골드 부족이면 무조건 판매 (목표 레벨 아닌 이상)
         elif is_out_of_gold and level is not None and level < MAX_LEVEL_FOR_ENHANCE:
             print("💸 골드 부족 감지 - 무조건 판매")
@@ -611,11 +634,14 @@ if __name__ == "__main__":
     parser.add_argument("--until", type=str, default=None, help="종료 시각 (HH:MM, 예: 18:00)")
     parser.add_argument("--shutdown", action="store_true", help="종료 시 PC 강제 종료")
     parser.add_argument("--sell-items", type=str, default=None, help="강제 판매 키워드 (쉼표 구분, 예: 검,몽둥이)")
+    parser.add_argument("--keep-items", type=str, default=None, help="판매 제외 키워드 (쉼표 구분, 예: 발렌타인)")
     args = parser.parse_args()
 
     # 아이템 필터 적용
     if args.sell_items:
         _sell_item_keywords = [kw.strip() for kw in args.sell_items.split(",") if kw.strip()]
+    if args.keep_items:
+        _keep_item_keywords = [kw.strip() for kw in args.keep_items.split(",") if kw.strip()]
 
     # 좌표 프로필 적용
     profile = COORD_PROFILES[args.profile]
@@ -631,6 +657,8 @@ if __name__ == "__main__":
     print("  F5: 종료 | ESC: 긴급 종료")
     if _sell_item_keywords:
         print(f"  Item filter: [{', '.join(_sell_item_keywords)}] -> force sell")
+    if _keep_item_keywords:
+        print(f"  Item keep:   [{', '.join(_keep_item_keywords)}] -> never sell")
     print("="*60)
     print()
 
