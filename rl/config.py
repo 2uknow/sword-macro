@@ -19,8 +19,8 @@ USE_RELATIVE_COORDS = True
 # get_coordinates_pyautogui.py를 실행해서 비율을 확인하세요
 COORD_PROFILES = {
     "home": {  # 집
-        "output": (0.542, 0.629),
-        "input": (0.535, 0.752),
+        "output": (0.915, 0.180),
+        "input": (0.908, 0.372),
     },
     "work": {  # 회사 (RDP)
         "output": (0.700, 0.511),
