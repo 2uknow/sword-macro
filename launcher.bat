@@ -176,10 +176,51 @@ if "%fchoice%"=="2" goto KEEP_INPUT
 goto %filter_return%
 
 :KEEP_INPUT
+set "saved_keep="
+if exist "%~dp0keep_keywords.txt" set /p saved_keep=<"%~dp0keep_keywords.txt"
+if defined saved_keep goto KEEP_SHOW_SAVED
+cls
+echo ==========================================
+echo  Keep keywords (sell filter exception)
+echo ==========================================
+echo.
+echo   No saved keywords.
+echo.
+echo   [1] Add keywords
+echo   [2] No keep filter
+echo.
+set "kchoice="
+set /p kchoice="Select: "
+if "%kchoice%"=="1" goto KEEP_EDIT
+goto %filter_return%
+
+:KEEP_SHOW_SAVED
+cls
+echo ==========================================
+echo  Keep keywords (sell filter exception)
+echo ==========================================
+echo.
+echo   Saved: %saved_keep%
+echo.
+echo   [1] Use saved
+echo   [2] Edit keywords
+echo   [3] No keep filter
+echo.
+set "kchoice="
+set /p kchoice="Select: "
+if "%kchoice%"=="1" set "keep_args=--keep-items %saved_keep%"
+if "%kchoice%"=="1" goto %filter_return%
+if "%kchoice%"=="2" goto KEEP_EDIT
+goto %filter_return%
+
+:KEEP_EDIT
 echo.
 set "keep_kw="
-set /p keep_kw="Keep keywords (comma-separated, Enter to skip): "
-if not "%keep_kw%"=="" set "keep_args=--keep-items %keep_kw%"
+set /p keep_kw="Keep keywords (comma-separated): "
+if "%keep_kw%"=="" goto %filter_return%
+echo %keep_kw%>"%~dp0keep_keywords.txt"
+set "keep_args=--keep-items %keep_kw%"
+echo   [OK] Saved to keep_keywords.txt
 goto %filter_return%
 
 :CUSTOM_FILTER
@@ -188,7 +229,10 @@ set /p sell_kw="Sell keywords (comma-separated): "
 if not "%sell_kw%"=="" set "sell_args=--sell-items %sell_kw%"
 set "keep_kw="
 set /p keep_kw="Keep keywords (comma-separated, Enter to skip): "
-if not "%keep_kw%"=="" set "keep_args=--keep-items %keep_kw%"
+if "%keep_kw%"=="" goto %filter_return%
+echo %keep_kw%>"%~dp0keep_keywords.txt"
+set "keep_args=--keep-items %keep_kw%"
+echo   [OK] Saved to keep_keywords.txt
 goto %filter_return%
 
 rem ============================================

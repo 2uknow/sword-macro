@@ -25,10 +25,48 @@ select_filter() {
     case "$fchoice" in
         2)
             SELL_ARGS="--sell-items 검,몽둥이"
-            echo ""
-            read -rp "Keep keywords (comma-separated, Enter to skip): " keep_kw
-            if [[ -n "$keep_kw" ]]; then
-                KEEP_ARGS="--keep-items ${keep_kw}"
+            local saved_keep=""
+            if [[ -f "$(dirname "$0")/keep_keywords.txt" ]]; then
+                saved_keep=$(cat "$(dirname "$0")/keep_keywords.txt")
+            fi
+            if [[ -n "$saved_keep" ]]; then
+                echo ""
+                echo "  Keep keywords saved: $saved_keep"
+                echo ""
+                echo "  [1] Use saved"
+                echo "  [2] Edit keywords"
+                echo "  [3] No keep filter"
+                echo ""
+                read -rp "Select: " kchoice
+                case "$kchoice" in
+                    1) KEEP_ARGS="--keep-items ${saved_keep}" ;;
+                    2)
+                        read -rp "Keep keywords (comma-separated): " keep_kw
+                        if [[ -n "$keep_kw" ]]; then
+                            echo "$keep_kw" > "$(dirname "$0")/keep_keywords.txt"
+                            KEEP_ARGS="--keep-items ${keep_kw}"
+                            echo "  [OK] Saved to keep_keywords.txt"
+                        fi
+                        ;;
+                    *) ;;
+                esac
+            else
+                echo ""
+                echo "  [1] Add keep keywords"
+                echo "  [2] No keep filter"
+                echo ""
+                read -rp "Select: " kchoice
+                case "$kchoice" in
+                    1)
+                        read -rp "Keep keywords (comma-separated): " keep_kw
+                        if [[ -n "$keep_kw" ]]; then
+                            echo "$keep_kw" > "$(dirname "$0")/keep_keywords.txt"
+                            KEEP_ARGS="--keep-items ${keep_kw}"
+                            echo "  [OK] Saved to keep_keywords.txt"
+                        fi
+                        ;;
+                    *) ;;
+                esac
             fi
             ;;
         3)
@@ -38,7 +76,9 @@ select_filter() {
             fi
             read -rp "Keep keywords (comma-separated, Enter to skip): " keep_kw
             if [[ -n "$keep_kw" ]]; then
+                echo "$keep_kw" > "$(dirname "$0")/keep_keywords.txt"
                 KEEP_ARGS="--keep-items ${keep_kw}"
+                echo "  [OK] Saved to keep_keywords.txt"
             fi
             ;;
         0) return 1 ;;

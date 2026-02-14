@@ -13,6 +13,9 @@ models/*
 logs/*
 saved/*
 
+# User settings
+keep_keywords.txt
+
 # OS files
 .DS_Store
 *.lnk
