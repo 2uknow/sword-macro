@@ -4,6 +4,16 @@ cd /d "%~dp0"
 title Sword Macro Launcher
 set "PY=%~dp0.venv\Scripts\python.exe"
 
+rem Last used options (persist across menu returns)
+set "last_mode="
+set "last_label="
+set "last_profile="
+set "last_timer_args="
+set "last_stop_time="
+set "last_sell_args="
+set "last_run_type="
+set "last_cmd="
+
 :MENU
 set "sell_args="
 set "profile="
@@ -13,6 +23,14 @@ echo ==========================================
 echo        Sword Macro Launcher
 echo ==========================================
 echo.
+if defined last_cmd (
+    echo   [r] Resume last:
+    echo       %last_label% / %last_profile%
+    if defined last_sell_args echo       Filter: %last_sell_args%
+    if defined last_stop_time echo       Timer: %last_stop_time%
+    echo       Run: %last_run_type%
+    echo.
+)
 echo   --- Macro ---
 echo   [1] Start macro (console)
 echo   [2] Start macro (background)
@@ -38,6 +56,7 @@ echo.
 echo ==========================================
 set /p choice="Select: "
 
+if /i "%choice%"=="r" goto RESUME_LAST
 if "%choice%"=="1" goto START_CONSOLE
 if "%choice%"=="2" goto START_BG
 if "%choice%"=="3" goto STOP
@@ -55,6 +74,63 @@ if /i "%choice%"=="d" goto RDP_DISCONNECT
 echo.
 echo [!] Invalid input.
 timeout /t 2 >nul
+goto MENU
+
+rem ============================================
+rem  [r] Resume with last options
+rem ============================================
+:RESUME_LAST
+if not defined last_cmd (
+    echo [!] No previous run found.
+    timeout /t 2 >nul
+    goto MENU
+)
+cls
+echo ==========================================
+echo  Resume last run
+echo ==========================================
+echo.
+echo   Mode:    %last_label%
+echo   Profile: %last_profile%
+if defined last_sell_args echo   Filter:  %last_sell_args%
+if defined last_stop_time echo   Timer:   %last_stop_time% + shutdown
+echo   Run:     %last_run_type%
+echo.
+echo   [1] Start
+echo   [0] Back
+echo.
+set /p rchoice="Select: "
+if "%rchoice%"=="0" goto MENU
+if "%last_run_type%"=="console" goto RESUME_CONSOLE
+if "%last_run_type%"=="background+RDP" goto RESUME_BG_RDP
+goto MENU
+
+:RESUME_CONSOLE
+cls
+echo ==========================================
+echo  %last_label% [%last_profile%] - starting in 5s...
+echo  Exit: F5 or ESC
+echo ==========================================
+echo.
+%PY% macro.py %last_cmd%
+echo.
+pause
+goto MENU
+
+:RESUME_BG_RDP
+cls
+echo ==========================================
+echo  %last_label% [%last_profile%] - background + RDP
+echo ==========================================
+echo.
+start "" %~dp0.venv\Scripts\pythonw.exe macro.py %last_cmd%
+echo [OK] Macro started in background (5s delay).
+echo.
+echo RDP disconnect in 3 seconds...
+timeout /t 3 >nul
+call "%~dp0rdp_disconnect.bat"
+echo.
+pause
 goto MENU
 
 rem ============================================
@@ -103,6 +179,14 @@ echo  Exit: F5 or ESC
 if not "%sell_args%"=="" echo  Filter: %sell_args%
 echo ==========================================
 echo.
+set "last_mode="
+set "last_label=Manual"
+set "last_profile=default"
+set "last_timer_args="
+set "last_stop_time="
+set "last_sell_args=%sell_args%"
+set "last_run_type=console"
+set "last_cmd=%sell_args%"
 %PY% macro.py %sell_args%
 echo.
 pause
@@ -122,6 +206,14 @@ echo  Macro start (background)
 if not "%sell_args%"=="" echo  Filter: %sell_args%
 echo ==========================================
 echo.
+set "last_mode="
+set "last_label=Manual"
+set "last_profile=default"
+set "last_timer_args="
+set "last_stop_time="
+set "last_sell_args=%sell_args%"
+set "last_run_type=background"
+set "last_cmd=%sell_args%"
 start "" %~dp0.venv\Scripts\pythonw.exe macro.py %sell_args%
 echo [OK] Macro started in background.
 echo      Use menu [3] to stop.
@@ -200,6 +292,17 @@ if "%rchoice%"=="0" (
     goto MENU
 )
 if "%rchoice%"=="2" goto AUTO_BG_RDP
+
+rem Save last options before starting
+set "last_mode=%auto_mode%"
+set "last_label=%auto_label%"
+set "last_profile=%profile%"
+set "last_timer_args=%timer_args%"
+set "last_stop_time=%stop_time%"
+set "last_sell_args=%sell_args%"
+set "last_run_type=console"
+set "last_cmd=--mode %auto_mode% --delay 5 --profile %profile% %timer_args% %sell_args%"
+
 cls
 echo ==========================================
 echo  %auto_label% [%profile%] - starting in 5s...
@@ -215,6 +318,16 @@ pause
 goto MENU
 
 :AUTO_BG_RDP
+rem Save last options before starting
+set "last_mode=%auto_mode%"
+set "last_label=%auto_label%"
+set "last_profile=%profile%"
+set "last_timer_args=%timer_args%"
+set "last_stop_time=%stop_time%"
+set "last_sell_args=%sell_args%"
+set "last_run_type=background+RDP"
+set "last_cmd=--mode %auto_mode% --delay 5 --profile %profile% %timer_args% %sell_args%"
+
 cls
 echo ==========================================
 echo  %auto_label% [%profile%] - background + RDP
