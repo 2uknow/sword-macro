@@ -170,11 +170,9 @@ set "keep_args="
 set "fchoice="
 set /p fchoice="Select: "
 if "%fchoice%"=="0" goto MENU
-if "%fchoice%"=="2" (
-    set "sell_args=--sell-items 검,몽둥이"
-    goto KEEP_INPUT
-)
 if "%fchoice%"=="3" goto CUSTOM_FILTER
+if "%fchoice%"=="2" set "sell_args=--sell-items 검,몽둥이"
+if "%fchoice%"=="2" goto KEEP_INPUT
 goto %filter_return%
 
 :KEEP_INPUT
