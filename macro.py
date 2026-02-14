@@ -504,8 +504,8 @@ def act_inference(mode='ai'):
                 kept = [kw for kw in _keep_item_keywords if kw in last_bot_message] if _keep_item_keywords else []
                 if not kept:
                     _filter_sell_pending = True
-        # 아이템 필터: 키워드 포함 시 강제 판매 (1~5강, 0강은 위에서 강화 처리)
-        elif _sell_item_keywords and level is not None and 1 <= level <= 5 and any(kw in last_bot_message for kw in _sell_item_keywords):
+        # 아이템 필터: 키워드 포함 시 강제 판매 (1~3강, 0강은 위에서 강화 처리)
+        elif _sell_item_keywords and level is not None and 1 <= level <= 3 and any(kw in last_bot_message for kw in _sell_item_keywords):
             # keep 키워드가 있으면 판매 안 함
             kept = [kw for kw in _keep_item_keywords if kw in last_bot_message] if _keep_item_keywords else []
             if kept:
